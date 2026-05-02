@@ -210,8 +210,7 @@ jobs:
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD" \
             --no-daemon \
-            --stacktrace \
-            --no-build-cache
+            --stacktrace
           echo "✅ APK build completed successfully"
 
       - name: Clean up keystore
@@ -232,8 +231,10 @@ jobs:
             - **Commit Hash:** [`${{ steps.commit_info.outputs.short_hash }}`](https://github.com/${{ env.SOURCE_REPO }}/commit/${{ steps.commit_info.outputs.full_hash }})
             - **Commit Date:** ${{ steps.commit_info.outputs.commit_date }}
             - **Build Reason:** ${{ steps.check_build.outputs.build_reason }}
+
             📦 **Downloads:**
             APK files are attached to this release. Choose the appropriate variant for your device.
+
           files: src/**/build/outputs/apk/**/release/*.apk
           draft: false
           prerelease: false
@@ -268,6 +269,8 @@ jobs:
             else
               echo "    Type: 📦 Update Release"
             fi
+            
+            # Check APK build result
             if [ "${{ steps.build_apks.outcome }}" = "success" ]; then
               echo "    APK Build: ✅ Succeeded"
               echo "    Release: ✅ Created Successfully"
