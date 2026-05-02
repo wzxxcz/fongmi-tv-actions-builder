@@ -189,10 +189,6 @@ jobs:
           fi
           cat > src/local.properties <<EOF
           sdk.dir=$SDK_DIR
-          storeFile=$GITHUB_WORKSPACE/keystore.jks
-          storePassword=$KEYSTORE_PASSWORD
-          keyAlias=$KEY_ALIAS
-          keyPassword=$KEY_PASSWORD
           EOF
           echo "✅ local.properties created successfully"
 
@@ -214,7 +210,8 @@ jobs:
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD" \
             --no-daemon \
-            --stacktrace
+            --stacktrace \
+            --no-build-cache
           echo "✅ APK build completed successfully"
 
       - name: Clean up keystore
