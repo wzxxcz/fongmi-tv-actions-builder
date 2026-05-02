@@ -24,7 +24,7 @@ jobs:
         shell: bash
 
     env:
-      # Build configuration
+      # 🔥 正确拉取你要的分支
       SOURCE_REPO: "wzxxcz/TV"
       SOURCE_BRANCH: "fongmi"
       API_RETRY_COUNT: 3
@@ -68,6 +68,13 @@ jobs:
         id: check_build
         run: |
           echo "🔍 Checking if build is needed..."
+
+          # ======================================
+          # 🔥 🔥 唯一修复：强制开启构建，永不跳过
+          # ======================================
+          echo "build_needed=true" >> "$GITHUB_OUTPUT"
+          echo "is_first_release=false" >> "$GITHUB_OUTPUT"
+          echo "build_reason=force_build" >> "$GITHUB_OUTPUT"
 
           # Force build if requested via workflow dispatch
           if [ "${{ github.event.inputs.force_build }}" = "true" ]; then
