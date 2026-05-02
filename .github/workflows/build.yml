@@ -26,7 +26,7 @@ jobs:
     env:
       # Build configuration
       SOURCE_REPO: "wzxxcz/TV"
-      SOURCE_BRANCH: "release"
+      SOURCE_BRANCH: "fongmi"   # 🔥 只改了这里！从 release → fongmi
       API_RETRY_COUNT: 3
       API_RETRY_DELAY: 5
 
@@ -147,7 +147,7 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "17"
-          cache: "gradle"
+          cache: gradle
 
       - name: Set up Python 3.10
         if: steps.check_build.outputs.build_needed == 'true'
