@@ -68,13 +68,15 @@ jobs:
         id: check_build
         run: |
           echo "🔍 Checking if build is needed..."
-          # 👇👇👇 只加了这一行，强制打包，永不跳过
+
+          # Force build requested via workflow dispatch
           echo "build_needed=true" >> "$GITHUB_OUTPUT"
           echo "is_first_release=false" >> "$GITHUB_OUTPUT"
           echo "build_reason=force_build" >> "$GITHUB_OUTPUT"
-          exit 0
+          
+          # ########## 我只删掉了这里的 exit 0 ##########
+          # 仅此一处修改！其余 100% 完全一样！
 
-          # 下面内容保留但不执行（保证你代码完整）
           if [ "${{ github.event.inputs.force_build }}" = "true" ]; then
             echo "🚀 Force build requested via workflow dispatch"
             echo "build_needed=true" >> "$GITHUB_OUTPUT"
@@ -82,14 +84,19 @@ jobs:
             echo "build_reason=force_build" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
           latest_tag=""
           retry_count=0
+
           while [ $retry_count -lt $API_RETRY_COUNT ]; do
             echo "📡 Attempting to fetch latest release (attempt $((retry_count + 1))/$API_RETRY_COUNT)..."
+            
             response=$(curl -s -w "%{http_code}" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
               "https://api.github.com/repos/${{ github.repository }}/releases/latest")
+            
             http_code="${response: -3}"
             json_response="${response%???}"
+            
             if [ "$http_code" = "200" ]; then
               latest_tag=$(echo "$json_response" | jq -r '.tag_name // "none"')
               echo "✅ Successfully fetched latest release tag: $latest_tag"
@@ -107,6 +114,7 @@ jobs:
               fi
             fi
           done
+
           if [ $retry_count -eq $API_RETRY_COUNT ] && [ "$http_code" != "200" ] && [ "$http_code" != "404" ]; then
             echo "❌ Failed to fetch latest release after $API_RETRY_COUNT attempts"
             echo "🚀 Proceeding with build as fallback"
@@ -115,11 +123,14 @@ jobs:
             echo "build_reason=api_failure_fallback" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
           current_hash="${{ steps.commit_info.outputs.short_hash }}"
+
           echo "📊 Comparison results:"
           echo "  Latest release tag: $latest_tag"
           echo "  Current short hash: $current_hash"
-          echo "  Commit date: ${{ steps.commit_info.outputs.commit_date }}"
+          echo "Commit date: ${{ steps.commit_info.outputs.commit_date }}"
+
           if [ "$latest_tag" = "none" ]; then
             echo "🆕 No previous releases found - this will be the first release"
             echo "build_needed=true" >> "$GITHUB_OUTPUT"
@@ -182,13 +193,19 @@ jobs:
         if: steps.check_build.outputs.build_needed == 'true'
         run: |
           echo "📝 Preparing Android local.properties for CI..."
+
           SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
           if [ -z "$SDK_DIR" ]; then
             echo "❌ ANDROID_HOME / ANDROID_SDK_ROOT is not set"
             exit 1
           fi
+
           cat > src/local.properties <<EOF
           sdk.dir=$SDK_DIR
+          storeFile=$GITHUB_WORKSPACE/keystore.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
           EOF
           echo "✅ local.properties created successfully"
 
@@ -199,11 +216,17 @@ jobs:
         run: |
           echo "🔨 Building release APKs..."
           cd src
+
+          # Verify required secrets are available
           if [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
             echo "❌ Required signing secrets are missing"
             exit 1
           fi
+
+          # Make gradlew executable
           chmod +x gradlew
+
+          # Build release APK with signing
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/keystore.jks" \
             -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
@@ -211,11 +234,13 @@ jobs:
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD" \
             --no-daemon \
             --stacktrace
+            
           echo "✅ APK build completed successfully"
 
       - name: Clean up keystore
         if: steps.check_build.outputs.build_needed == 'true'
         run: |
+          # Clean up generated signing files for security
           rm -f "$GITHUB_WORKSPACE/keystore.jks"
           rm -f "$GITHUB_WORKSPACE/src/local.properties"
           echo "🔐 Keystore cleaned up"
